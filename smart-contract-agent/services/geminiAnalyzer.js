@@ -23,7 +23,7 @@ const log = require('../utils/logger');
 // =============================================================================
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const MODEL_NAME = 'gemini-2.0-flash';
+const MODEL_NAME = 'gemini-2.5-flash';  // Use latest flash model
 
 // Generation configuration for consistent, focused outputs
 const GENERATION_CONFIG = {
@@ -441,26 +441,55 @@ async function sendToGemini(prompt) {
       duration: `${duration}s`
     });
     
+    // Log the full Gemini response to file (not terminal)
+    log.logGeminiResponse(text, {
+      analysisMode: 'gemini-api',
+      responseLength: text.length,
+      duration: `${duration}s`
+    });
+    
     return text;
     
   } catch (error) {
-    log.error('Gemini API call failed', { error: error.message });
+    // Log the FULL error details for debugging
+    log.error('Gemini API call failed - FULL ERROR DETAILS:', { 
+      message: error.message,
+      name: error.name,
+      code: error.code,
+      status: error.status,
+      statusText: error.statusText,
+      details: error.errorDetails || error.details,
+      stack: error.stack?.substring(0, 500)
+    });
+    
+    // Also log to file for full debugging
+    log.logGeminiResponse(`ERROR: ${JSON.stringify({
+      message: error.message,
+      name: error.name,
+      code: error.code,
+      status: error.status,
+      details: error.errorDetails || error.details,
+      fullError: String(error)
+    }, null, 2)}`, { analysisMode: 'ERROR' });
+    
+    const errorMsg = error.message?.toLowerCase() || '';
+    const errorStr = String(error).toLowerCase();
     
     // Handle specific error types
-    if (error.message?.includes('429') || error.message?.includes('quota') || error.message?.includes('RESOURCE_EXHAUSTED')) {
-      throw new Error('Gemini API rate limit exceeded. Please try again in 1 minute.');
+    if (errorMsg.includes('429') || errorMsg.includes('quota') || errorStr.includes('resource_exhausted')) {
+      throw new Error(`Gemini API rate limit exceeded. Please try again in 1 minute. (Raw: ${error.message})`);
     }
     
-    if (error.message?.includes('401') || error.message?.includes('API key') || error.message?.includes('PERMISSION_DENIED')) {
-      throw new Error('Invalid Gemini API key. Please check GEMINI_API_KEY in .env file.');
+    if (errorMsg.includes('401') || errorMsg.includes('api key') || errorStr.includes('permission_denied') || errorMsg.includes('api_key_invalid')) {
+      throw new Error(`Invalid Gemini API key. Please check GEMINI_API_KEY in .env file. (Raw: ${error.message})`);
     }
     
-    if (error.message?.includes('timeout') || error.message?.includes('DEADLINE_EXCEEDED')) {
-      throw new Error('Gemini analysis timed out. The code may be too large to analyze.');
+    if (errorMsg.includes('timeout') || errorStr.includes('deadline_exceeded')) {
+      throw new Error(`Gemini analysis timed out. The code may be too large to analyze. (Raw: ${error.message})`);
     }
     
-    if (error.message?.includes('SAFETY')) {
-      throw new Error('Gemini blocked the request due to safety filters. Please review the content.');
+    if (errorMsg.includes('safety')) {
+      throw new Error(`Gemini blocked the request due to safety filters. Please review the content. (Raw: ${error.message})`);
     }
     
     throw new Error(`Gemini AI analysis failed: ${error.message}`);

@@ -3,6 +3,15 @@
  * Provides consistent logging across the application with timestamps and log levels
  */
 
+const fs = require('fs');
+const path = require('path');
+
+// Ensure logs directory exists
+const LOGS_DIR = path.join(__dirname, '..', 'logs');
+if (!fs.existsSync(LOGS_DIR)) {
+  fs.mkdirSync(LOGS_DIR, { recursive: true });
+}
+
 /**
  * Format a log message with timestamp and level
  * @param {string} level - Log level (INFO, ERROR, WARN, DEBUG)
@@ -59,9 +68,46 @@ function debug(message, data = null) {
   }
 }
 
+/**
+ * Log Gemini response to a file
+ * Appends the response to logs/gemini-responses.log
+ * @param {string} response - The raw Gemini response text
+ * @param {Object} metadata - Optional metadata (repo, timestamp, etc.)
+ */
+function logGeminiResponse(response, metadata = {}) {
+  const timestamp = new Date().toISOString();
+  const logFile = path.join(LOGS_DIR, 'gemini-responses.log');
+  
+  let logEntry = '\n' + '='.repeat(80) + '\n';
+  logEntry += `GEMINI RESPONSE - ${timestamp}\n`;
+  logEntry += '='.repeat(80) + '\n';
+  
+  if (metadata.repository) {
+    logEntry += `Repository: ${metadata.repository}\n`;
+  }
+  if (metadata.pdfFile) {
+    logEntry += `PDF File: ${metadata.pdfFile}\n`;
+  }
+  if (metadata.analysisMode) {
+    logEntry += `Analysis Mode: ${metadata.analysisMode}\n`;
+  }
+  
+  logEntry += '-'.repeat(80) + '\n';
+  logEntry += response + '\n';
+  logEntry += '='.repeat(80) + '\n\n';
+  
+  try {
+    fs.appendFileSync(logFile, logEntry, 'utf8');
+    console.log(formatLog('INFO', `Gemini response logged to ${logFile}`));
+  } catch (err) {
+    console.error(formatLog('ERROR', `Failed to write Gemini response to log file: ${err.message}`));
+  }
+}
+
 module.exports = {
   info,
   error,
   warn,
-  debug
+  debug,
+  logGeminiResponse
 };
