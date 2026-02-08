@@ -8,7 +8,13 @@
     "dev": "nodemon server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["blockchain", "security", "smart-contracts", "AI", "vulnerability-detection"],
+  "keywords": [
+    "blockchain",
+    "security",
+    "smart-contracts",
+    "AI",
+    "vulnerability-detection"
+  ],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
@@ -19,7 +25,8 @@
     "dotenv": "^17.2.4",
     "express": "^5.2.1",
     "multer": "^2.0.2",
-    "pdf-parse": "^2.4.5"
+    "pdf-parse": "1.1.1",
+    "pdfkit": "^0.17.2"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"

@@ -16,6 +16,9 @@ const fs = require('fs');
 const log = require('./utils/logger');
 const { validateGithubUrl, validatePdfFile } = require('./utils/validators');
 
+// Import services
+const { analyzePdf } = require('./services/pdfParser');
+
 // Initialize Express app
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -131,6 +134,8 @@ app.get('/health', (req, res) => {
  * Accepts: multipart/form-data with 'pdf' file and 'githubRepo' text field
  */
 app.post('/api/analyze', upload.single('pdf'), async (req, res) => {
+  let filePath = null;
+  
   try {
     log.info('Full analysis request received');
 
@@ -157,6 +162,8 @@ app.post('/api/analyze', upload.single('pdf'), async (req, res) => {
       });
     }
 
+    filePath = req.file.path;
+
     log.info('Request validated successfully', {
       filename: req.file.originalname,
       size: req.file.size,
@@ -164,44 +171,65 @@ app.post('/api/analyze', upload.single('pdf'), async (req, res) => {
       repo: urlValidation.repo
     });
 
-    // TODO: Phase 2-5 - Implement actual analysis logic
-    // For now, return placeholder response
+    // PHASE 2: Extract and structure PDF content
+    log.info('Starting PDF extraction...');
+    const pdfData = await analyzePdf(filePath);
+
+    // Generate summary
+    const { generateSummary } = require('./services/pdfParser');
+    const summary = generateSummary(pdfData);
+
+    // Response with PDF extraction (ready for Gemini in Phase 4)
     res.json({
       success: true,
-      message: 'Analysis endpoint is ready! Full implementation coming in Phases 2-5',
-      receivedData: {
-        pdfFile: {
-          originalName: req.file.originalname,
-          size: req.file.size,
-          path: req.file.path
+      analysis: {
+        pdf: {
+          metadata: pdfData.metadata,
+          sections: Object.keys(pdfData.sections).filter(k => pdfData.sections[k].length > 0),
+          status: pdfData.status,
+          summary: summary
         },
-        githubRepo: {
-          url: githubUrl,
-          owner: urlValidation.owner,
-          repo: urlValidation.repo
-        }
-      },
-      nextSteps: [
-        'Phase 2: PDF parsing and content extraction',
-        'Phase 3: GitHub repository code fetching',
-        'Phase 4: AI-powered vulnerability analysis',
-        'Phase 5: Cross-validation and risk scoring'
-      ]
+        github: {
+          status: 'pending',
+          message: 'GitHub code extraction coming in Phase 3',
+          repository: {
+            url: githubUrl,
+            owner: urlValidation.owner,
+            repo: urlValidation.repo
+          }
+        },
+        ai: {
+          status: 'pending',
+          message: 'Gemini AI analysis coming in Phase 4'
+        },
+        note: 'PDF text extracted and structured. Ready for AI analysis when Phase 4 is implemented.',
+        timestamp: new Date().toISOString()
+      }
     });
 
-    // Clean up uploaded file (remove this in later phases when we need to process it)
+    // Clean up uploaded file after successful processing
     setTimeout(() => {
-      if (fs.existsSync(req.file.path)) {
-        fs.unlinkSync(req.file.path);
-        log.debug('Temporary file cleaned up', { path: req.file.path });
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        log.debug('Temporary file cleaned up', { path: filePath });
       }
-    }, 5000);
+    }, 2000);
 
   } catch (error) {
-    log.error('Error in full analysis endpoint', error);
+    log.error('Error in full analysis endpoint', { 
+      error: error.message,
+      stack: error.stack 
+    });
+
+    // Clean up file on error
+    if (filePath && fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
     res.status(500).json({
       success: false,
-      error: 'Internal server error during analysis'
+      error: error.message || 'Internal server error during analysis',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });
