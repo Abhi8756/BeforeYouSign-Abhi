@@ -10,7 +10,7 @@
 An AI-powered analysis engine that:
 - Takes PDF whitepaper text (from Phase 2)
 - Takes Solidity smart contract code (from Phase 3)
-- Sends structured prompt to Gemini 2.0 Flash
+- Sends structured prompt to Gemini 2.5 Flash
 - Receives AI analysis identifying:
   - **Discrepancies** (PDF promises vs code reality)
   - **Security vulnerabilities** (reentrancy, overflow, etc.)
