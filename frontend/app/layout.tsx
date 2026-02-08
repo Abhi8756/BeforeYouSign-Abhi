@@ -4,6 +4,7 @@ import "./globals.css";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import { ClerkProvider } from "@clerk/nextjs";
+import { dark } from "@clerk/themes";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,6 +29,7 @@ export default function RootLayout({
   return (
     <ClerkProvider
       appearance={{
+        baseTheme: dark,
         variables: {
           colorPrimary: "#a78bfa",
           colorBackground: "#18181b",
@@ -35,6 +37,7 @@ export default function RootLayout({
           colorInputText: "#ffffff",
           colorText: "#ffffff",
           colorTextSecondary: "#a1a1aa",
+          colorTextOnPrimaryBackground: "#ffffff",
         },
         elements: {
           card: "bg-zinc-900 border border-zinc-800",
@@ -43,6 +46,21 @@ export default function RootLayout({
           formFieldLabel: "text-zinc-300",
           formFieldInput: "bg-zinc-800 border-zinc-700 text-white",
           footerActionLink: "text-violet-400 hover:text-violet-300",
+          socialButtonsBlockButton: "bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700",
+          socialButtonsBlockButtonText: "text-white",
+          dividerLine: "bg-zinc-700",
+          dividerText: "text-zinc-400",
+          formButtonPrimary: "bg-violet-500 hover:bg-violet-600 text-white",
+          identityPreviewText: "text-white",
+          identityPreviewEditButtonIcon: "text-violet-400",
+          formFieldInputShowPasswordButton: "text-zinc-400 hover:text-white",
+          otpCodeFieldInput: "bg-zinc-800 border-zinc-700 text-white",
+          formResendCodeLink: "text-violet-400 hover:text-violet-300",
+          userButtonPopoverCard: "bg-zinc-900 border border-zinc-800",
+          userButtonPopoverActionButton: "text-zinc-300 hover:text-white hover:bg-zinc-800",
+          userButtonPopoverActionButtonText: "text-zinc-300",
+          userButtonPopoverActionButtonIcon: "text-zinc-400",
+          userButtonPopoverFooter: "hidden",
         },
       }}
     >
