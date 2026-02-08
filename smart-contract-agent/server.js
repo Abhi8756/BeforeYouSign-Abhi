@@ -197,23 +197,19 @@ app.post('/api/analyze', upload.single('pdf'), async (req, res) => {
     const analysisResult = await analyzeWithGemini(pdfData, githubData);
     
     log.info('Phase 4 complete', {
-      trustScore: analysisResult.finalVerdict.trustScore,
-      classification: analysisResult.finalVerdict.classification,
-      vulnerabilities: analysisResult.aiAnalysis.vulnerabilities.length,
-      discrepancies: analysisResult.aiAnalysis.discrepancies.length
+      responseLength: analysisResult.rawGeminiResponse?.length || 0,
+      duration: analysisResult.metadata?.duration
     });
 
-    // Response with complete analysis
+    // Response with Gemini analysis
     res.json({
       success: true,
       analysis: {
         metadata: analysisResult.metadata,
         pdfExtraction: analysisResult.pdfExtraction,
         codeExtraction: analysisResult.codeExtraction,
-        aiAnalysis: analysisResult.aiAnalysis,
-        finalVerdict: analysisResult.finalVerdict
+        aiAnalysis: analysisResult.aiAnalysis
       },
-      report: analysisResult.report,
       timestamp: new Date().toISOString()
     });
 
@@ -284,19 +280,17 @@ app.post('/api/analyze/quick', async (req, res) => {
     const analysisResult = await analyzeQuick(githubData);
     
     log.info('Phase 4 complete', {
-      trustScore: analysisResult.finalVerdict.trustScore,
-      classification: analysisResult.finalVerdict.classification,
-      vulnerabilities: analysisResult.aiAnalysis.vulnerabilities.length
+      responseLength: analysisResult.rawGeminiResponse?.length || 0,
+      duration: analysisResult.metadata?.duration
     });
 
-    // Response with analysis
+    // Response with Gemini analysis
     res.json({
       success: true,
       analysis: {
         metadata: analysisResult.metadata,
         codeExtraction: analysisResult.codeExtraction,
-        aiAnalysis: analysisResult.aiAnalysis,
-        finalVerdict: analysisResult.finalVerdict
+        aiAnalysis: analysisResult.aiAnalysis
       },
       timestamp: new Date().toISOString()
     });

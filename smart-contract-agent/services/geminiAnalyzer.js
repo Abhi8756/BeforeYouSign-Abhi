@@ -1056,23 +1056,27 @@ async function analyzeWithGemini(pdfData, githubData) {
     });
     
     // Log raw response length for debugging
-    log.info('Raw response received for parsing', {
+    log.info('Raw response received', {
       responseLength: responseText?.length || 0,
       isEmpty: !responseText || responseText.length === 0
     });
     
-    // Step 3: Parse the response
-    const geminiAnalysis = parseGeminiResponse(responseText);
-    
-    // If parsing failed, log additional info
-    if (geminiAnalysis.parseError) {
-      log.error('PARSE ERROR - Raw response preview:', {
-        first500: responseText?.substring(0, 500),
-        last500: responseText?.substring(Math.max(0, responseText.length - 500))
-      });
+    // Step 3: Return raw Gemini response directly (frontend handles parsing)
+    // Try to extract JSON from the response if possible
+    let geminiAnalysis = null;
+    try {
+      // Try to extract JSON from response
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        geminiAnalysis = JSON.parse(jsonMatch[0]);
+      }
+    } catch (e) {
+      log.info('Could not pre-parse JSON, returning raw response');
     }
     
-    // Step 4: Structure the final output
+    // Step 4: Structure the final output with raw response
+    const duration = `${((Date.now() - startTime) / 1000).toFixed(2)}s`;
+    
     const result = {
       metadata: {
         analyzedAt: new Date().toISOString(),
@@ -1083,7 +1087,7 @@ async function analyzeWithGemini(pdfData, githubData) {
         totalCodeLines: githubData.metadata?.totalLines || 0,
         aiModel: MODEL_NAME,
         analysisMode: 'full',
-        duration: `${((Date.now() - startTime) / 1000).toFixed(2)}s`
+        duration
       },
       
       pdfExtraction: {
@@ -1099,40 +1103,18 @@ async function analyzeWithGemini(pdfData, githubData) {
         categories: githubData.metadata?.categories || {}
       },
       
-      aiAnalysis: {
-        discrepancies: geminiAnalysis.discrepancies || [],
-        vulnerabilities: geminiAnalysis.vulnerabilities || [],
-        codeQualityIssues: geminiAnalysis.codeQualityIssues || [],
-        tokenomicsVerification: geminiAnalysis.tokenomicsVerification || {},
-        riskScore: geminiAnalysis.riskScore || { overall: 0, classification: 'UNKNOWN' },
-        summary: geminiAnalysis.summary || 'Analysis completed.',
-        redFlags: geminiAnalysis.redFlags || [],
-        positiveAspects: geminiAnalysis.positiveAspects || [],
-        // Include raw response if parsing failed for debugging
-        rawResponse: geminiAnalysis.parseError ? responseText : undefined,
-        parseError: geminiAnalysis.parseError || false
-      },
+      // Return raw Gemini response for frontend to use directly
+      rawGeminiResponse: responseText,
       
-      finalVerdict: {
-        trustScore: geminiAnalysis.riskScore?.overall ?? 0,
-        classification: geminiAnalysis.riskScore?.classification || 'UNKNOWN',
-        confidence: geminiAnalysis.riskScore?.confidence || 'MEDIUM',
-        recommendation: generateRecommendation(geminiAnalysis)
-      }
+      // Also include parsed analysis if parsing succeeded
+      aiAnalysis: geminiAnalysis || null
     };
-    
-    // Generate report
-    result.report = generateReport(result);
-    
-    const duration = ((Date.now() - startTime) / 1000).toFixed(2);
     
     log.info('=== Gemini AI Analysis Complete ===');
     log.info('Analysis results', {
-      trustScore: result.finalVerdict.trustScore,
-      classification: result.finalVerdict.classification,
-      discrepancies: result.aiAnalysis.discrepancies.length,
-      vulnerabilities: result.aiAnalysis.vulnerabilities.length,
-      duration: `${duration}s`
+      responseLength: responseText?.length || 0,
+      parsedSuccessfully: geminiAnalysis !== null,
+      duration
     });
     
     return result;
@@ -1167,10 +1149,20 @@ async function analyzeQuick(githubData) {
     // Send to Gemini
     const responseText = await sendToGemini(prompt);
     
-    // Parse response
-    const geminiAnalysis = parseGeminiResponse(responseText);
+    // Try to parse response, but don't fail if it doesn't work
+    let geminiAnalysis = null;
+    try {
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        geminiAnalysis = JSON.parse(jsonMatch[0]);
+      }
+    } catch (e) {
+      log.info('Could not pre-parse JSON, returning raw response');
+    }
     
-    // Structure output
+    const duration = `${((Date.now() - startTime) / 1000).toFixed(2)}s`;
+    
+    // Structure output with raw response
     const result = {
       metadata: {
         analyzedAt: new Date().toISOString(),
@@ -1179,7 +1171,7 @@ async function analyzeQuick(githubData) {
         totalCodeLines: githubData.metadata?.totalLines || 0,
         aiModel: MODEL_NAME,
         analysisMode: 'quick',
-        duration: `${((Date.now() - startTime) / 1000).toFixed(2)}s`
+        duration
       },
       
       codeExtraction: {
@@ -1189,25 +1181,18 @@ async function analyzeQuick(githubData) {
         categories: githubData.metadata?.categories || {}
       },
       
-      aiAnalysis: {
-        vulnerabilities: geminiAnalysis.vulnerabilities || [],
-        codeQualityIssues: geminiAnalysis.codeQualityIssues || [],
-        tokenomicsAnalysis: geminiAnalysis.tokenomicsAnalysis || {},
-        riskScore: geminiAnalysis.riskScore || { overall: 0, classification: 'UNKNOWN' },
-        summary: geminiAnalysis.summary || 'Analysis completed.',
-        redFlags: geminiAnalysis.redFlags || [],
-        positiveAspects: geminiAnalysis.positiveAspects || []
-      },
+      // Return raw Gemini response for frontend to use directly
+      rawGeminiResponse: responseText,
       
-      finalVerdict: {
-        trustScore: geminiAnalysis.riskScore?.overall ?? 0,
-        classification: geminiAnalysis.riskScore?.classification || 'UNKNOWN',
-        recommendation: generateRecommendation(geminiAnalysis)
-      }
+      // Also include parsed analysis if parsing succeeded
+      aiAnalysis: geminiAnalysis || null
     };
     
-    const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-    log.info('=== Quick Analysis Complete ===', { duration: `${duration}s` });
+    log.info('=== Quick Analysis Complete ===', { 
+      responseLength: responseText?.length || 0,
+      parsedSuccessfully: geminiAnalysis !== null,
+      duration 
+    });
     
     return result;
     
