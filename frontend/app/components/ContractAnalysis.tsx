@@ -351,7 +351,7 @@ export default function ContractAnalysis() {
               <p className="text-zinc-400 text-xs uppercase tracking-wide mb-1">Trust Score</p>
               <p className={`text-4xl font-bold ${getScoreColor(overall)}`}>
                 {overall?.toFixed(1) ?? "N/A"}
-                <span className="text-lg text-zinc-500">/10</span>
+                <span className="text-lg text-zinc-500"></span>
               </p>
             </div>
             {confidence && (
